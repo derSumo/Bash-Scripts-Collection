@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Überprüfen, ob ein Verzeichnispfad angegeben wurde
+if [ -z "$1" ]; then
+    echo "Bitte geben Sie einen Verzeichnispfad an."
+    exit 1
+fi
+
+# Überprüfen, ob das angegebene Verzeichnis existiert
+if [ ! -d "$1" ]; then
+    echo "Das angegebene Verzeichnis existiert nicht."
+    exit 1
+fi
+
+# Funktion zum rekursiven Entfernen leerer Verzeichnisse
+remove_empty_dirs() {
+    local dir="$1"
+
+    # Durchlaufen aller Unterordner im angegebenen Verzeichnis
+    find "$dir" -mindepth 1 -type d | while read subdir; do
+        # Rekursiver Aufruf der Funktion für jedes gefundene Unterordner
+        remove_empty_dirs "$subdir"
+    done
+
+    # Wenn das Verzeichnis leer ist, wird es entfernt
+    if [ -z "$(ls -A "$dir")" ]; then
+        echo "Entferne leeres Verzeichnis: $dir"
+        rmdir "$dir"
+    fi
+}
+
+# Aufrufen der Funktion mit dem angegebenen Verzeichnispfad
+remove_empty_dirs "$1"
