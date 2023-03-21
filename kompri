@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# Überprüfen, ob pv installiert ist, und falls nicht, installieren
+if ! command -v pv > /dev/null; then
+  echo "Das pv-Tool ist nicht installiert. Installiere es jetzt ..."
+  sudo apt-get update
+  sudo apt-get install -y pv
+fi
+
+# Definiere die Variable, die den Pfad zum Verzeichnis speichert
+directory_path=""
+
+# Wiederholen, bis ein gültiger Ordnerpfad angegeben wurde
+while [ ! -d "$directory_path" ]; do
+  # Fragt den Ordnerpfad ab
+  read -p "Bitte geben Sie den Pfad zum zu komprimierenden Ordner ein: " directory_path
+
+  # Prüft, ob das angegebene Verzeichnis existiert
+  if [ ! -d "$directory_path" ]; then
+    echo "Das Verzeichnis $directory_path existiert nicht."
+  fi
+done
+
+# Fragt nach der gewünschten Komprimierungsmethode
+echo "Welches Komprimierungsformat möchten Sie verwenden?"
+echo "  1) LZMA (fast) - dauer aber trozdem sehr lange."
+echo "  2) gzip (standard)"
+
+# Setzt standardmäßig gzip (2) als Standardauswahl
+compression_format="gz"
+
+while true; do
+  read -p "Geben Sie 1 oder 2 ein (Standard: 2): " format_option
+  case $format_option in
+    1)
+      compression_format="lzma"
+      break
+      ;;
+    2 | "")
+      break
+      ;;
+    *)
+      echo "Ungültige Eingabe. Bitte geben Sie 1 oder 2 ein."
+      ;;
+  esac
+done
+
+# Komprimiert den Ordner im gewählten Format und zeigt den Fortschrittsbalken an
+if [ "$compression_format" == "lzma" ]; then
+  compressed_filename="${directory_path%/}-$(date +%Y-%m-%d)-backup.tar.lzma"
+  tar cf - "$directory_path" 2> /dev/null | pv -s $(du -sb "$directory_path" | awk '{print $1}') | lzma -1 -c > "$compressed_filename"
+else
+  compressed_filename="${directory_path%/}-$(date +%Y-%m-%d)-backup.tar.gz"
+  tar cf - "$directory_path" 2> /dev/null | pv -s $(du -sb "$directory_path" | awk '{print $1}') | gzip -c > "$compressed_filename"
+fi
+
+echo "Komprimierung abgeschlossen. Die Datei wurde als $compressed_filename gespeichert."
